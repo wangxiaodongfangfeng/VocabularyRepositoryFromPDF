@@ -1,0 +1,6 @@
+@VocabularyRepositoryFromPDF_HostAddress = http://localhost:5011
+
+GET {{VocabularyRepositoryFromPDF_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
