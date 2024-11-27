@@ -3,10 +3,20 @@ using System.Text;
 
 namespace VocabularyRepositoryFromPDF.WebSocket;
 
-public class WebSocketManager
+/// <summary>
+/// 
+/// </summary>
+public class WebSocketManager : IWebSocketManager
 {
     private readonly List<System.Net.WebSockets.WebSocket> _sockets = [];
 
+
+    public List<System.Net.WebSockets.WebSocket> Sockets => _sockets;
+
+    /// <summary>
+    /// queue the sockets when connected event happened
+    /// </summary>
+    /// <param name="socket"></param>
     public async Task AddSocketAsync(System.Net.WebSockets.WebSocket socket)
     {
         _sockets.Add(socket);
@@ -23,6 +33,10 @@ public class WebSocketManager
         }
     }
 
+    /// <summary>
+    /// Send the event to the client
+    /// </summary>
+    /// <param name="message"></param>
     public async Task BroadcastMessageAsync(string message)
     {
         var messageBuffer = Encoding.UTF8.GetBytes(message);
@@ -31,7 +45,8 @@ public class WebSocketManager
         {
             if (socket.State == WebSocketState.Open)
             {
-                await socket.SendAsync(new ArraySegment<byte>(messageBuffer), WebSocketMessageType.Text, true, CancellationToken.None);
+                await socket.SendAsync(new ArraySegment<byte>(messageBuffer), WebSocketMessageType.Text, true,
+                    CancellationToken.None);
             }
             else
             {
