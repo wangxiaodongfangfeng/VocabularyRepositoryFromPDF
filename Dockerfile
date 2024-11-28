@@ -14,12 +14,12 @@ ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
 # Copy and restore dependencies
-COPY ["VocabularyRepositoryFromPDF/VocabularyRepositoryFromPDF.csproj", "VocabularyRepositoryFromPDF/"]
-RUN dotnet restore "VocabularyRepositoryFromPDF/VocabularyRepositoryFromPDF.csproj"
+COPY ["VocabularyRepositoryFromPDF.csproj", "."]
+RUN dotnet restore "VocabularyRepositoryFromPDF.csproj"
 
 # Copy the rest of the application code
 COPY . .
-WORKDIR "/src/VocabularyRepositoryFromPDF"
+WORKDIR "/src"
 RUN dotnet build "VocabularyRepositoryFromPDF.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 FROM build AS publish
