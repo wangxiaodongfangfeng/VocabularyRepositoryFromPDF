@@ -13,22 +13,27 @@ public class DictionaryOperator
 
         this._filePath = Path.Combine(dictionaryPath, "Dictionary.pdf");
 
-        if (Directory.Exists(dictionaryPath))
+        if (!File.Exists(_filePath))
+        {
+            if (!Directory.Exists(dictionaryPath))
+            {
+                Directory.CreateDirectory(dictionaryPath);
+            }
+
+            File.Create(_filePath).Close();
+        }
+        else
         {
             this.LoadDictionaryAsync();
-            return;
         }
-
-        Directory.CreateDirectory(dictionaryPath);
-        File.Create(_filePath).Close();
     }
 
     public async void AppendToDictionaryAsync(string key, string value)
     {
         var exist = _dictionary.ContainsKey(key);
-        if (exist ) return;
+        if (exist) return;
         await File.AppendAllLinesAsync(this._filePath, new List<string> { $"{key}={value}" });
-        _dictionary.Add(key,true);
+        _dictionary.Add(key, true);
     }
 
     private async void LoadDictionaryAsync()
@@ -54,6 +59,7 @@ public class DictionaryOperator
                 return line;
             }
         }
+
         return null;
     }
 }

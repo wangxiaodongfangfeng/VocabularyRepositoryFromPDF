@@ -6,12 +6,9 @@ namespace VocabularyRepositoryFromPDF.WebSocket;
 /// <summary>
 /// 
 /// </summary>
-public class WebSocketManager : IWebSocketManager
+public class WebSocketManager : IWebSocketManager, IDisposable
 {
-    private readonly List<System.Net.WebSockets.WebSocket> _sockets = [];
-
-
-    public List<System.Net.WebSockets.WebSocket> Sockets => _sockets;
+    public List<(System.Net.WebSockets.WebSocket socket, CancellationToken cancellationToken)> Sockets { get; } = [];
 
     /// <summary>
     /// queue the sockets when connected event happened
@@ -19,17 +16,16 @@ public class WebSocketManager : IWebSocketManager
     /// <param name="socket"></param>
     public async Task AddSocketAsync(System.Net.WebSockets.WebSocket socket)
     {
-        _sockets.Add(socket);
+        var socketPair = (socket, CancellationToken.None);
+        Sockets.Add(socketPair);
         var buffer = new byte[1024 * 4];
 
         // Listen for incoming messages (optional)
         while (socket.State == WebSocketState.Open)
         {
             var result = await socket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
-
             if (!result.CloseStatus.HasValue) continue;
-            await socket.CloseAsync(result.CloseStatus.Value, result.CloseStatusDescription, CancellationToken.None);
-            _sockets.Remove(socket);
+            Sockets.Remove(socketPair);
         }
     }
 
@@ -41,17 +37,27 @@ public class WebSocketManager : IWebSocketManager
     {
         var messageBuffer = Encoding.UTF8.GetBytes(message);
 
-        foreach (var socket in _sockets.ToList()) // Use ToList to avoid collection modification errors
+        foreach (var socketPair in Sockets.ToList()) // Use ToList to avoid collection modification errors
         {
-            if (socket.State == WebSocketState.Open)
+            if (socketPair.socket.State == WebSocketState.Open)
             {
-                await socket.SendAsync(new ArraySegment<byte>(messageBuffer), WebSocketMessageType.Text, true,
-                    CancellationToken.None);
+                await socketPair.socket.SendAsync(new ArraySegment<byte>(messageBuffer), WebSocketMessageType.Text,
+                    true,
+                    socketPair.cancellationToken);
             }
             else
             {
-                _sockets.Remove(socket);
+                Sockets.Remove(socketPair);
             }
         }
     }
+
+    public void Dispose() =>
+        Sockets.ForEach(s =>
+        {
+            if (s.socket.State == WebSocketState.Open)
+            {
+                s.socket.CloseAsync(WebSocketCloseStatus.Empty, null, CancellationToken.None);
+            }
+        });
 }

@@ -1,14 +1,23 @@
 ﻿FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
-USER $APP_UID
 WORKDIR /app
+
+# Create the user and dictionary directory
+RUN adduser --disabled-password appuser \
+    && mkdir -p /app/dictionary \
+    && chown -R appuser:appuser /app/dictionary
+# Switch to non-root user
+USER appuser
 EXPOSE 8080
-EXPOSE 8081
 
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
+
+# Copy and restore dependencies
 COPY ["VocabularyRepositoryFromPDF/VocabularyRepositoryFromPDF.csproj", "VocabularyRepositoryFromPDF/"]
 RUN dotnet restore "VocabularyRepositoryFromPDF/VocabularyRepositoryFromPDF.csproj"
+
+# Copy the rest of the application code
 COPY . .
 WORKDIR "/src/VocabularyRepositoryFromPDF"
 RUN dotnet build "VocabularyRepositoryFromPDF.csproj" -c $BUILD_CONFIGURATION -o /app/build
@@ -19,5 +28,8 @@ RUN dotnet publish "VocabularyRepositoryFromPDF.csproj" -c $BUILD_CONFIGURATION 
 
 FROM base AS final
 WORKDIR /app
+# Copy published application to the final image
 COPY --from=publish /app/publish .
+# Ensure directory permissions are correct for runtime
+USER appuser
 ENTRYPOINT ["dotnet", "VocabularyRepositoryFromPDF.dll"]

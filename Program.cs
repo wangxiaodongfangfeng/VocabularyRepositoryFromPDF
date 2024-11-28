@@ -14,8 +14,8 @@ var origin = builder.Configuration["AllowedCorsOrigin"] ?? "https://www.vocabula
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(corsPolicy,
-        //policy => { policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader(); });
-        policy => { policy.WithOrigins(origin.Split(",")).AllowAnyMethod().AllowAnyHeader(); });
+        policy => { policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader(); });
+    //policy => { policy.WithOrigins(origin.Split(",")).AllowAnyMethod().AllowAnyHeader(); });
 });
 builder.Services.AddSingleton<WebSocketManager>();
 builder.Services.AddSingleton<DictionaryOperator>((serviceProvider) =>
@@ -23,7 +23,6 @@ builder.Services.AddSingleton<DictionaryOperator>((serviceProvider) =>
 builder.Services.AddControllers();
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
-
 
 var app = builder.Build();
 if (app.Environment.IsDevelopment())
@@ -34,7 +33,7 @@ if (app.Environment.IsDevelopment())
 app.UseCors(corsPolicy);
 app.UseSwagger();
 app.UseSwaggerUI();
-app.UseHttpsRedirection();
+//app.UseHttpsRedirection();
 app.UseWebSockets();
 app.Map("/ws", async context =>
 {
@@ -50,4 +49,9 @@ app.Map("/ws", async context =>
     }
 }).RequireCors(corsPolicy);
 app.MapControllers().RequireCors(corsPolicy).WithOpenApi();
+app.Lifetime.ApplicationStopping.Register(() =>
+{
+    var manager = app.Services.GetService<WebSocketManager>();
+    manager?.Dispose();
+});
 app.Run();
